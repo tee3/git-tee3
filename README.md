@@ -3,6 +3,8 @@
 This is a small set of tools for use with Git.  There is nothing
 special about them at all.
 
+## git-rebase-branch-prefix
+
 ## git-svn-update-externals
 
 This is a Python tool to provide a mechanism to keep the svn:externals
