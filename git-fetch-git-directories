@@ -1,0 +1,12 @@
+#!/bin/sh
+
+for d in * ; do
+    if [ -d "${d}/.git" ] ; then
+        echo "info: updating git repository at ${d}"
+        (cd "${d}" && \
+                git fetch --all && \
+                git submodule foreach git fetch --all && \
+                git fetch --tags origin && \
+                git submodule foreach git fetch --tags origin)
+    fi
+done

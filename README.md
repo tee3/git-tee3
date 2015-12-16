@@ -5,6 +5,8 @@ special about them at all.
 
 ## git-annotate-lightweight-tag
 
+## git-fetch-git-directories
+
 ## git-fixup-commit-message
 
 ## git-fixup-author-committer
