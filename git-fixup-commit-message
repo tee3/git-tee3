@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ ${#} -gt 1 ]; then
+    echo "usage: $0 <refs>"
+    exit 1
+fi
+
+if [ -z "${1}" ]; then
+    refs=--all
+else
+    refs=${1}
+fi
+
+git filter-branch --msg-filter "sed -E 's/\[(.+)\] (.+)/\1: \2/'" --tag-name-filter cat -- "${refs}"
