@@ -1,0 +1,26 @@
+#!/bin/sh
+#
+# Replaces a lightweight tag with an annotated tag.  This is only in
+# the local repository, it is up to the user to push the tags
+# separately.
+
+set -e
+
+
+progname=$(basename "${0}")
+tagname=${1}
+
+
+if [ -z "$1" ]; then
+    echo "usage: $progname <tag>"
+    echo
+    echo "        Replaces a lightweight tag <tag> with an annotated tag"
+    echo "        of the same name in the working repository."
+    echo
+    echo "        The user is required to push the tags when appropriate."
+    exit 1
+fi
+
+git checkout "${tagname}"
+# this will prompt the user for a message
+GIT_COMMITTER_DATE="$(git show --format=%aD | head -1)" git tag -f -a "${tagname}"
