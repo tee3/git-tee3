@@ -1,0 +1,28 @@
+#!/bin/sh
+
+set -e
+
+branchdir=/tmp/git-migrate-branches
+
+branchprefix=devel-
+if [ "${1}" != "" ]; then
+    branchprefix=${1}
+fi
+
+rebaseroot=master
+if [ "${2}" != "" ]; then
+    rebaseroot=${2}
+fi
+
+if [ ! -d ${branchdir} ]; then
+    echo "error: directory does not exist: ${branchdir}"
+
+    exit 1
+fi
+
+# parse the branches out
+branches=$(cd ${branchdir} && ls "${branchprefix}"*)
+
+for b in ${branches} ; do
+    git checkout -b "${b}" "${rebaseroot}" && git am < "${branchdir}/${b}"
+done

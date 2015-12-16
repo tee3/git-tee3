@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+branchdir=/tmp/git-migrate-branches
+
+branchprefix=devel-
+if [ "${1}" != "" ]; then
+    branchprefix=${1}
+fi
+
+if [ -d ${branchdir} ]; then
+    echo "error: directory already exists: ${branchdir}"
+
+    exit 1
+fi
+
+# parse the branches out
+branches=$(git branch | grep "${branchprefix}" | cut -c 2-)
+
+mkdir -p "${branchdir}"
+for b in ${branches} ; do
+    git format-patch --stdout "master..${b}" > "${branchdir}/${b}"
+done
