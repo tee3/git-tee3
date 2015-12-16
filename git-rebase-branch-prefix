@@ -2,18 +2,28 @@
 #
 # @todo add an option to enable a force push to origin (or somewhere else)
 #       "--push origin"
+# @todo add an option to rebase interactively
 
 set -e
 
-branchprefix=devel-
-if [ "${1}" != "" ]; then
-    branchprefix=${1}
+#interactive=-i
+interactive=
+
+#push=1
+push=0
+
+branchprefix=${1}
+if [ -z "${branchprefix}" ]; then
+    echo "$0: error: must specify a branch prefix"
+    exit 1
 fi
 
 # parse the branches out
 branches=$(git branch | cut -c 3- | grep "^${branchprefix}")
 for b in ${branches} ; do
     git checkout "${b}"
-    git rebase master
-#    git push -f origin "${b}"
+    git rebase ${interactive} master
+    if [ "${push}" = "1" ]; then
+        git push -f origin "${b}"
+    fi
 done
