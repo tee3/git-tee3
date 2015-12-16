@@ -1,0 +1,123 @@
+#!/usr/bin/env python
+#
+# A script to be run during a git filter-branch index-filter.
+
+import argparse
+
+import sys
+import os
+import subprocess
+import re
+
+import pygit2
+
+# returns a dictionary of submodules and submodule data
+def gitsvnextmodules_configuration_parse(repository,data):
+    tmpfilename = '/tmp/gitsvnextmodules'
+
+    submodules = {}
+
+    fp = open(tmpfilename,'w')
+    fp.write(data)
+    fp.close()
+
+    # gets a list of submodule paths so we can find all the submodules
+    parsed_data = subprocess.check_output(['git', 'config', '-f', tmpfilename, '-l'])
+
+    if args.debug:
+        print parsed_data
+
+    # parse each line containing and make a list of submodules
+    for line in parsed_data.splitlines():
+        m = re.match(r'^submodule\.(.+)\.path=.+',line)
+
+        # create an list of submodule metadata
+        if m is not None:
+            submodule = {}
+
+            assert(m.group(1) is not None)
+            submodule['name'] = m.group(1)
+
+            command = ['git', 'config', '-f', tmpfilename, 'submodule' + '.' + submodule['name'] + '.path']
+            output = subprocess.check_output(command)
+            m = re.match(r'^(.+)$',output)
+            assert(m is not None)
+            assert(m.group(1) is not None)
+            submodule['path'] = m.group(1)
+
+            command = ['git', 'config', '-f', tmpfilename, 'submodule' + '.' + submodule['name'] + '.url']
+            output = subprocess.check_output(command)
+            m = re.match(r'^(.+)$',output)
+            assert(m is not None)
+            assert(m.group(1) is not None)
+            submodule['svn_repository_project_url'] = m.group(1)
+
+            # convert from svn url to git url
+            #! @todo this is strict to make sure everything follows the rule
+            #! have no idea what to do when they don't except do it by hand
+            m = re.match(svn_externals_base_url + r'/(.+)/tags/([^/]+)$',submodule['svn_repository_project_url'])
+            if m is not None:
+                assert(m.group(1) is not None)
+                assert(m.group(2) is not None)
+                submodule['svn_project_path'] = m.group(1)
+                submodule['git_repository_project_url'] = args.github_enterprise_server_base_url + '/' + submodule['svn_project_path'] + '.git'
+                submodule['tag'] = 'tags' + '/' + m.group(2)
+            else:
+                # somebody may have committed against trunk, so we'll try to fix
+                #! @todo this doesn't fix it, just does what it would have done, kind of
+                m = re.match(svn_externals_base_url + r'/(.+)/trunk$',submodule['svn_repository_project_url'])
+                if m is not None:
+                    print >> sys.stderr, "warning: svn:externals on trunk, setting to master at HEAD"
+
+                    assert(m.group(1) is not None)
+
+                    submodule['svn_project_path'] = m.group(1)
+                    submodule['git_repository_project_url'] = args.github_enterprise_server_base_url + '/' + submodule['svn_project_path'] + '.git'
+
+                    # find the commit id for the HEAD
+                    #! @todo this is definitely wrong, needs to be master at that time
+                    submodule_repository = pygit2.Repository(submodule['git_repository_project_url'])
+                    o = submodule_repository.revparse_single('master')
+
+                    submodule['tag'] = str(o.id)
+                else:
+                    print >> sys.stderr, "error: unsupported svn:externals pattern: %s" & (submodule['svn_repository_project_url'])
+                    sys.exit(1)
+
+            submodules[submodule['name']] = submodule
+
+    return submodules
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Populate Git submodules from .gitsvnextmodules.')
+    parser.add_argument('-v', '--verbose',
+                        action='store_true',
+                        default=False,
+                        help='Be verbose')
+    parser.add_argument('-d', '--debug',
+                        action='store_true',
+                        default=False,
+                        help='Print debug information')
+    parser.add_argument('-n', '--dryrun',
+                        action='store_true',
+                        default=False,
+                        help='Do not actually do anything')
+    parser.add_argument('--commitid',
+                        help='The commitid to process, defaults to GIT_COMMIT')
+
+    args = parser.parse_args()
+
+    if args.commitid is not None:
+        commitid = args.commitid
+    else:
+        assert ('GIT_COMMIT' in os.environ)
+        commitid = os.environ['GIT_COMMIT']
+
+    # open the git repository here
+    repository_path = pygit2.discover_repository('.')
+    repository = pygit2.Repository(repository_path)
+
+    # do whatever you want to do here
+    tree = repository.revparse_single(commitid).tree;
+    for entry in tree:
+        print entry.name
