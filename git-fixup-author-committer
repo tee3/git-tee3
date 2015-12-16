@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+# git fixup-author-committer <NAME> <EMAIL> [refs]
+#
+# @todo Use the Git environment variables if they exist?
+
+if [ ${#} -lt 2 ] || [ ${#} -gt 3 ]; then
+
+    echo "usage: $0 <NAME> <EMAIL> [refs]"
+    exit 1
+fi
+
+name=${1}
+email=${2}
+if [ -z "${3}" ]; then
+    refs=--all
+else
+    refs=${3}
+fi
+
+git filter-branch --env-filter 'GIT_AUTHOR_NAME="${name}" ; GIT_AUTHOR_EMAIL="${email}" ; GIT_COMMITTER_NAME="${name}" ; GIT_COMMITTER_EMAIL="${email}"' --tag-name-filter cat -- "${refs}"
