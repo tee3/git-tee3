@@ -1,34 +1,47 @@
 #!/bin/sh
-#
-# @todo add an option to enable a force push to origin (or somewhere else)
-#       "--push origin"
-# @todo add an option to rebase interactively
 
 set -e
 
-#interactive=-i
-interactive=
+usage() {
+    echo "usage: git-rebase-branch-prefix [-h] [-i] [-p] [-f] <branch-prefix> <rebase-branch>"
+}
 
-#push=1
-push=0
+while getopts "hipf" opt; do
+    case "${opt}" in
+        h)
+            usage
+            exit 2
+            ;;
+        i)
+            interactive=-i
+            ;;
+        p)
+            push=1
+            ;;
+        f)
+            force=-f
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+shift $((OPTIND -1))
+
+if [ $# -ne 2 ]; then
+    usage
+    exit 2
+fi
 
 branchprefix=${1}
-if [ -z "${branchprefix}" ]; then
-    echo "$0: error: must specify a branch prefix"
-    exit 1
-fi
-
 rebasebranch=${2}
-if [ -z "${rebasebranch}" ]; then
-    rebasebranch=master
-fi
 
 # parse the branches out
 branches=$(git branch | cut -c 3- | grep "^${branchprefix}")
 for b in ${branches} ; do
     git checkout "${b}"
-    git rebase ${interactive} ${rebasebranch}
+    git rebase ${interactive} "${rebasebranch}"
     if [ "${push}" = "1" ]; then
-        git push -f origin "${b}"
+        git push ${force} origin "${b}"
     fi
 done
